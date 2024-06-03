@@ -1,0 +1,6 @@
+menu "metric_tracker"
+    config METRIC_TRACKER_ENABLE
+        int "Enable metric tracker"
+        range 0 1
+        default 1
+endmenu

@@ -1,0 +1,9 @@
+version: "0.0.8"
+license: "MIT"
+description: "This is a test component"
+url: "https://mycomponent.com"  # The homepage of the component. It can be a GitHub repository page.
+dependencies:
+  ronny-antoon/on_error:
+    version: "^0.0.1"
+    require: "private"
+  idf: ">=4.1.0"
