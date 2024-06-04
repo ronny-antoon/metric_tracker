@@ -3,6 +3,8 @@
 #include <esp_log.h>
 #include <esp_http_client.h>
 #include <arch/sys_arch.h>
+
+#include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
 #include <on_error.hpp>
@@ -198,7 +200,7 @@ esp_err_t metric_tracker_send(bool send_heap, bool send_tasks)
     }
 
     // Configure HTTP client
-    esp_http_client_config_t config = {.url = config_post->url_path, .method = HTTP_METHOD_POST};
+    esp_http_client_config_t config = {.url = config_post->url_path, .method = HTTP_METHOD_POST, .timeout_ms = 10 * 1000};
 
     esp_http_client_handle_t client = esp_http_client_init(&config);
     if (client == NULL)
@@ -209,6 +211,7 @@ esp_err_t metric_tracker_send(bool send_heap, bool send_tasks)
 
     // Set POST field
     esp_err_t err = esp_http_client_set_post_field(client, config_post->json_buffer, strlen(config_post->json_buffer));
+    err = esp_http_client_set_timeout_ms(client, 10000);
     if (err != ESP_OK)
     {
         esp_http_client_cleanup(client);
