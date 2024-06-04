@@ -1,7 +1,7 @@
-version: "0.0.10"
+version: "0.1.0"
 license: "MIT"
-description: "This is a test component"
-url: "https://mycomponent.com"  # The homepage of the component. It can be a GitHub repository page.
+description: "The `metric_tracker` component framework for ESP-IDF provides a simple interface for tracking and sending metrics data to a server."
+url: "https://github.com/ronny-antoon/metric_tracker"  # The homepage of the component. It can be a GitHub repository page.
 dependencies:
   ronny-antoon/on_error:
     version: "^0.0.1"

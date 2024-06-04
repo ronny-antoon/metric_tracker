@@ -20,7 +20,7 @@ OR
 ```
 dependencies:
   ronny-antoon/metric_tracker:
-    version: "^0.0.9"
+    version: "^0.1.0"
 ```
 
 
@@ -46,6 +46,6 @@ The `metric_tracker` component framework is licensed under the MIT License. See 
 
 ## Links
 
-- [GitHub Repository](https://github.com/your/repository)
-- [Espressif IDF Documentation](https://docs.espressif.com/projects/esp-idf/)
+- [GitHub Repository](https://github.com/ronny-antoon/metric_tracker)
+- [Espressif IDF Registry](https://components.espressif.com/components/ronny-antoon/metrtic_tracker)
 
