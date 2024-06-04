@@ -3,3 +3,4 @@ metric_server/node_modules/*/*
 build/*
 dependencies.lock
 sdkconfig
+dist/*
