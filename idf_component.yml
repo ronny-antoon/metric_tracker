@@ -1,4 +1,4 @@
-version: "0.0.8"
+version: "0.0.9"
 license: "MIT"
 description: "This is a test component"
 url: "https://mycomponent.com"  # The homepage of the component. It can be a GitHub repository page.

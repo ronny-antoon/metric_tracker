@@ -20,18 +20,23 @@ static metric_tracker_config_t *config_post;
 
 esp_err_t metric_tracker_init(const char *url_path, const char *device_id, uint16_t max_buffer_size)
 {
+    // Initialize the metric tracker with provided parameters
     ESP_LOGI(TAG, "Initializing metrics server with URL: %s, Device ID: %s, Max Buffer Size: %d", url_path, device_id,
              max_buffer_size);
 
+    // Allocate memory for the configuration
     config_post = (metric_tracker_config_t *)malloc(sizeof(metric_tracker_config_t));
     ON_NULL_PRINT_RETURN(config_post, ESP_ERR_NO_MEM, "Memory allocation failed for config_post");
 
+    // Allocate memory and copy URL path
     config_post->url_path = new char[strlen(url_path) + 1];
     strcpy(config_post->url_path, url_path);
 
+    // Allocate memory and copy device ID
     config_post->device_id = new char[strlen(device_id) + 1];
     strcpy(config_post->device_id, device_id);
 
+    // Set max buffer size and allocate memory for JSON buffer
     config_post->max_buffer_size = max_buffer_size;
     config_post->json_buffer = (char *)calloc(max_buffer_size, sizeof(char));
 
@@ -41,14 +46,17 @@ esp_err_t metric_tracker_init(const char *url_path, const char *device_id, uint1
 
 esp_err_t metric_tracker_add_metric(const char *name, float value)
 {
+    // Add a metric to the JSON buffer
     ESP_LOGI(TAG, "Adding metric: %s with value: %f", name, value);
     ON_NULL_PRINT_RETURN(config_post, ESP_ERR_INVALID_STATE, "Config post is NULL, invalid state");
 
+    // Check for buffer overflow risk
     if (strlen(config_post->json_buffer) + strlen(name) + 50 > config_post->max_buffer_size)
     {
         ON_ERR_PRINT_RETURN(ESP_ERR_NO_MEM, ESP_ERR_NO_MEM, "Buffer overflow risk, metric not added");
     }
 
+    // If JSON buffer is empty, initialize it
     if (strlen(config_post->json_buffer) == 0)
     {
         sprintf(config_post->json_buffer, "{\"device_id\": \"%s\", \"metrics\": [{\"name\": \"%s\", \"value\": %f}",
@@ -56,6 +64,7 @@ esp_err_t metric_tracker_add_metric(const char *name, float value)
     }
     else
     {
+        // Append metric to existing JSON buffer
         sprintf(config_post->json_buffer + strlen(config_post->json_buffer), ", {\"name\": \"%s\", \"value\": %f}",
                 name, value);
     }
@@ -66,9 +75,11 @@ esp_err_t metric_tracker_add_metric(const char *name, float value)
 
 esp_err_t metric_tracker_add_heap()
 {
+    // Add heap metrics to the JSON buffer
     ESP_LOGI(TAG, "Adding heap metrics");
     ON_NULL_PRINT_RETURN(config_post, ESP_ERR_INVALID_STATE, "Config post is NULL, invalid state");
 
+    // If JSON buffer is empty, initialize it
     if (strlen(config_post->json_buffer) == 0)
     {
         sprintf(config_post->json_buffer,
@@ -78,6 +89,7 @@ esp_err_t metric_tracker_add_heap()
     }
     else
     {
+        // Append heap metrics to existing JSON buffer
         sprintf(config_post->json_buffer + strlen(config_post->json_buffer),
                 ", \"heap\": [{\"name\": \"heap_free\", \"value\": %d}, {\"name\": \"heap_min_free\", \"value\": %d}]",
                 (int)esp_get_free_heap_size(), (int)esp_get_minimum_free_heap_size());
@@ -89,6 +101,7 @@ esp_err_t metric_tracker_add_heap()
 
 esp_err_t metric_tracker_add_tasks()
 {
+    // Add task metrics to the JSON buffer
     ESP_LOGI(TAG, "Adding task metrics");
     ON_NULL_PRINT_RETURN(config_post, ESP_ERR_INVALID_STATE, "Config post is NULL, invalid state");
 
@@ -107,12 +120,14 @@ esp_err_t metric_tracker_add_tasks()
 
     if (strlen(config_post->json_buffer) == 0)
     {
+        // If JSON buffer is empty, initialize it
         sprintf(config_post->json_buffer, "{\"device_id\": \"%s\", \"tasks\": [{\"name\": \"%s\", \"stack_free\": %d}",
                 config_post->device_id, pxTaskStatusArray[0].pcTaskName,
                 (int)pxTaskStatusArray[0].usStackHighWaterMark);
     }
     else
     {
+        // Append task metrics to existing JSON buffer
         sprintf(config_post->json_buffer + strlen(config_post->json_buffer),
                 ", \"tasks\": [{\"name\": \"%s\", \"stack_free\": %d}", pxTaskStatusArray[0].pcTaskName,
                 (int)pxTaskStatusArray[0].usStackHighWaterMark);
@@ -120,9 +135,7 @@ esp_err_t metric_tracker_add_tasks()
 
     for (x = 1; x < uxArraySize - 1; x++)
     {
-        ESP_LOGI(TAG, "uxArraySize: %d, x: %d", uxArraySize, x);
-        ESP_LOGI(TAG, "Task name: %s, Stack free: %d", pxTaskStatusArray[x].pcTaskName,
-                 (int)pxTaskStatusArray[x].usStackHighWaterMark);
+        // Add remaining task metrics to JSON buffer
         sprintf(config_post->json_buffer + strlen(config_post->json_buffer), ", {\"name\": \"%s\", \"stack_free\": %d}",
                 pxTaskStatusArray[x].pcTaskName, (int)pxTaskStatusArray[x].usStackHighWaterMark);
     }
@@ -141,8 +154,10 @@ esp_err_t metric_tracker_add_tasks()
 
 esp_err_t metric_tracker_send(bool send_heap, bool send_tasks)
 {
+    // Send tracked metrics to the server
     ESP_LOGI(TAG, "Sending metrics with send_heap: %d, send_tasks: %d", send_heap, send_tasks);
 
+    // Check for NULL configuration
     if (config_post == NULL)
     {
         memset(config_post->json_buffer, '\0', config_post->max_buffer_size);
@@ -153,6 +168,7 @@ esp_err_t metric_tracker_send(bool send_heap, bool send_tasks)
         sprintf(config_post->json_buffer + strlen(config_post->json_buffer), "]");
     }
 
+    // If sending heap or task metrics is requested
     if (send_heap || send_tasks)
     {
         if (send_heap)
@@ -167,6 +183,7 @@ esp_err_t metric_tracker_send(bool send_heap, bool send_tasks)
     }
     else
     {
+        // If no metrics to send, ensure JSON buffer is not empty
         if (strlen(config_post->json_buffer) == 0)
         {
             memset(config_post->json_buffer, '\0', config_post->max_buffer_size);
@@ -176,6 +193,7 @@ esp_err_t metric_tracker_send(bool send_heap, bool send_tasks)
         sprintf(config_post->json_buffer + strlen(config_post->json_buffer), "]}"); // Close the JSON
     }
 
+    // Configure HTTP client
     esp_http_client_config_t config = {.url = config_post->url_path, .method = HTTP_METHOD_POST};
 
     esp_http_client_handle_t client = esp_http_client_init(&config);
@@ -185,6 +203,7 @@ esp_err_t metric_tracker_send(bool send_heap, bool send_tasks)
         ON_ERR_PRINT_RETURN(ESP_ERR_NO_MEM, ESP_ERR_NO_MEM, "HTTP client initialization failed");
     }
 
+    // Set POST field
     esp_err_t err = esp_http_client_set_post_field(client, config_post->json_buffer, strlen(config_post->json_buffer));
     if (err != ESP_OK)
     {
@@ -193,6 +212,7 @@ esp_err_t metric_tracker_send(bool send_heap, bool send_tasks)
         ON_ERR_PRINT_RETURN(err, err, "Setting post field failed: %s", esp_err_to_name(err));
     }
 
+    // Set header
     err = esp_http_client_set_header(client, "Content-Type", "application/json");
     if (err != ESP_OK)
     {
@@ -201,6 +221,7 @@ esp_err_t metric_tracker_send(bool send_heap, bool send_tasks)
         ON_ERR_PRINT_RETURN(err, err, "Setting header failed: %s", esp_err_to_name(err));
     }
 
+    // Perform HTTP request
     err = esp_http_client_perform(client);
     if (err != ESP_OK)
     {
@@ -221,9 +242,11 @@ esp_err_t metric_tracker_send(bool send_heap, bool send_tasks)
 
 esp_err_t metric_tracker_deinit()
 {
+    // Deinitialize the metric tracker
     ESP_LOGI(TAG, "Deinitializing metrics server");
     ON_NULL_PRINT_RETURN(config_post, ESP_ERR_INVALID_STATE, "Config post is NULL, invalid state");
 
+    // Free allocated memory
     free(config_post->url_path);
     free(config_post->device_id);
     free(config_post->json_buffer);
@@ -236,12 +259,14 @@ esp_err_t metric_tracker_deinit()
 
 esp_err_t metric_tracker_auto_send(uint16_t interval_seconds, bool send_heap, bool send_tasks)
 {
+    // Start automatic sending of tracked metrics
     ESP_LOGI(TAG, "Starting auto-send with interval: %d seconds, send_heap: %d, send_tasks: %d", interval_seconds,
              send_heap, send_tasks);
     ON_NULL_PRINT_RETURN(config_post, ESP_ERR_INVALID_STATE, "Config post is NULL, invalid state");
 
     while (true)
     {
+        // Send metrics and delay
         metric_tracker_send(send_heap, send_tasks);
         vTaskDelay(interval_seconds * 1000 / portTICK_PERIOD_MS);
     }
