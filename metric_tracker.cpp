@@ -3,6 +3,7 @@
 #include <esp_log.h>
 #include <esp_http_client.h>
 #include <arch/sys_arch.h>
+#include <freertos/task.h>
 
 #include <on_error.hpp>
 
@@ -14,6 +15,7 @@ typedef struct
     char *device_id;
     uint16_t max_buffer_size;
     char *json_buffer;
+    TaskHandle_t *auto_send_task;
 } metric_tracker_config_t;
 
 static metric_tracker_config_t *config_post;
@@ -39,6 +41,8 @@ esp_err_t metric_tracker_init(const char *url_path, const char *device_id, uint1
     // Set max buffer size and allocate memory for JSON buffer
     config_post->max_buffer_size = max_buffer_size;
     config_post->json_buffer = (char *)calloc(max_buffer_size, sizeof(char));
+
+    config_post->auto_send_task = NULL;
 
     ESP_LOGI(TAG, "Metrics server initialized successfully");
     return ESP_OK;
@@ -246,6 +250,13 @@ esp_err_t metric_tracker_deinit()
     ESP_LOGI(TAG, "Deinitializing metrics server");
     ON_NULL_PRINT_RETURN(config_post, ESP_ERR_INVALID_STATE, "Config post is NULL, invalid state");
 
+    // Stop auto-send task if running
+    if (config_post->auto_send_task != NULL)
+    {
+        vTaskDelete(*(config_post->auto_send_task));
+        config_post->auto_send_task = NULL;
+    }
+
     // Free allocated memory
     free(config_post->url_path);
     free(config_post->device_id);
@@ -264,13 +275,22 @@ esp_err_t metric_tracker_auto_send(uint16_t interval_seconds, bool send_heap, bo
              send_heap, send_tasks);
     ON_NULL_PRINT_RETURN(config_post, ESP_ERR_INVALID_STATE, "Config post is NULL, invalid state");
 
-    while (true)
-    {
-        // Send metrics and delay
-        metric_tracker_send(send_heap, send_tasks);
-        vTaskDelay(interval_seconds * 1000 / portTICK_PERIOD_MS);
-    }
+    // Create a task to send metrics periodically
+    xTaskCreate([](void *pvParameters)
+                {
+        // Get the interval from the parameters
+        uint16_t interval_seconds = *(uint16_t *)pvParameters;
 
+        // Send metrics periodically
+        while (true)
+        {
+            // Send metrics and delay
+            metric_tracker_send(true, true);
+            vTaskDelay(interval_seconds * 1000 / portTICK_PERIOD_MS);
+        } },
+                "auto_send_task", 4096, &interval_seconds, 5, config_post->auto_send_task);
+
+    ESP_LOGI(TAG, "Auto-send started successfully");
     // This line will never be reached
     return ESP_OK;
 }
