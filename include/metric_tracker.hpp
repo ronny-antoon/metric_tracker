@@ -1,8 +1,9 @@
 #ifndef METRIC_TRACKER_HPP
 #define METRIC_TRACKER_HPP
 
-#include <cstdint>
 #include <esp_err.h>
+
+#include <cstdint>
 
 /**
  * @brief Initializes the metric tracker.
@@ -49,4 +50,4 @@ esp_err_t metric_tracker_auto_send(uint16_t interval_seconds, bool send_heap = t
  */
 esp_err_t metric_tracker_deinit();
 
-#endif // METRIC_TRACKER_HPP
+#endif  // METRIC_TRACKER_HPP
